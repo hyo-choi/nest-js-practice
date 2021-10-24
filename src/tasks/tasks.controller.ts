@@ -19,7 +19,7 @@ import {
 import { CreateTaskDto } from './dto/create-task.dto';
 import { GetTasksFilterDto } from './dto/get-tasks-filter.dto';
 import { UpdateTaskStatusDto } from './dto/update-task-by-id.dto';
-import { Task } from './task.model';
+import { Task } from './task.entity';
 import { TasksService } from './tasks.service';
 
 @Controller('tasks')
@@ -35,11 +35,8 @@ export class TasksController {
     description: 'task 정보를 가져온다.',
   })
   @ApiOkResponse({ description: '성공' })
-  getTasks(@Query() filterDto: GetTasksFilterDto): Task[] {
-    if (Object.keys(filterDto).length) {
-      return this.tasksService.getTasksWithFilters(filterDto);
-    }
-    return this.tasksService.getAllTasks();
+  getTasks(@Query() filterDto: GetTasksFilterDto): Promise<Task[]> {
+    return this.tasksService.getTasks(filterDto);
   }
 
   @Get('/:id')
@@ -50,7 +47,7 @@ export class TasksController {
   @ApiOkResponse({ description: '성공' })
   @ApiBadRequestResponse({ description: '요청 양식 오류' })
   @ApiNotFoundResponse({ description: '일치하는 task 없음' })
-  getTaskById(@Param('id') id: string): Task {
+  getTaskById(@Param('id') id: string): Promise<Task> {
     return this.tasksService.getTaskById(id);
   }
 
@@ -61,7 +58,7 @@ export class TasksController {
   })
   @ApiCreatedResponse({ description: 'task 생성' })
   @ApiBadRequestResponse({ description: '요청 양식 오류' })
-  createTask(@Body() createTaskDto: CreateTaskDto): Task {
+  createTask(@Body() createTaskDto: CreateTaskDto): Promise<Task> {
     return this.tasksService.createTask(createTaskDto);
   }
 
@@ -79,7 +76,7 @@ export class TasksController {
   updateTaskById(
     @Param('id') id: string,
     @Body() updateTaskStatusDto: UpdateTaskStatusDto,
-  ): Task {
+  ): Promise<Task> {
     const { status } = updateTaskStatusDto;
     return this.tasksService.updateTaskById(id, status);
   }
@@ -91,7 +88,7 @@ export class TasksController {
   })
   @ApiOkResponse({ description: '성공' })
   @ApiBadRequestResponse({ description: '요청 양식 오류' })
-  deleteTaskById(@Param('id') id: string): void {
+  deleteTaskById(@Param('id') id: string): Promise<void> {
     return this.tasksService.deleteTaskById(id);
   }
 }

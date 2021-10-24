@@ -1,77 +1,48 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Task, TaskStatus } from './task.model';
-import { v4 as uuid } from 'uuid';
+import { TaskStatus } from './task-status.enum';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { GetTasksFilterDto } from './dto/get-tasks-filter.dto';
+import { TasksRepository } from './tasks.repository';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Task } from './task.entity';
 
 @Injectable()
 export class TasksService {
-  private tasks: Task[] = [];
-  /**이런 property는 private으로 하는 게 좋음
-   * 왜냐면 이 service를 사용하는 다른 코드에서 변경이 일어나고
-   * 이로 인해 에러가 발생한 경우 오류 파악이 어렵기 때문
-   */
+  constructor(
+    @InjectRepository(TasksRepository)
+    private tasksRepository: TasksRepository,
+  ) {}
 
-  getAllTasks(): Task[] {
-    /** public 붙이지 않아도 TS에서는 기본 public
-     * 붙이고 싶으면 붙여도 되는데 일관성 있게 할 것
-     */
-    return this.tasks;
+  getTasks(filterDto: GetTasksFilterDto): Promise<Task[]> {
+    return this.tasksRepository.getTasks(filterDto);
   }
 
-  getTasksWithFilters(filterDto: GetTasksFilterDto): Task[] {
-    const { status, search } = filterDto;
-
-    let tasks = this.getAllTasks();
-    if (status) {
-      tasks = tasks.filter((task) => task.status === status);
-    }
-
-    if (search) {
-      tasks = tasks.filter((task) => {
-        if (task.title.includes(search) || task.description.includes(search)) {
-          return true;
-        }
-        return false;
-      });
-    }
-
-    return tasks;
-  }
-
-  getTaskById(id: string): Task {
-    const found = this.tasks.find((task) => task.id === id);
-
+  async getTaskById(id: string): Promise<Task> {
+    const found = await this.tasksRepository.findOne(id);
     if (!found) {
-      throw new NotFoundException([`Task with id ${id} not found`]);
+      throw new NotFoundException([`Task with id "${id}" not found`]);
     }
     return found;
   }
 
-  createTask(createTaskDto: CreateTaskDto): Task {
-    const { title, description } = createTaskDto;
-
-    const task: Task = {
-      id: uuid(),
-      title,
-      description,
-      status: TaskStatus.OPEN,
-    };
-
-    this.tasks.push(task);
-
-    return task;
+  createTask(createTaskDto: CreateTaskDto): Promise<Task> {
+    return this.tasksRepository.createTask(createTaskDto);
   }
 
-  updateTaskById(id: string, status: TaskStatus): Task {
-    const task = this.getTaskById(id);
+  async updateTaskById(id: string, status: TaskStatus): Promise<Task> {
+    const task = await this.getTaskById(id);
+
     task.status = status;
+    await this.tasksRepository.save(task);
     return task;
   }
 
-  deleteTaskById(id: string): void {
-    const found = this.getTaskById(id);
-    this.tasks = this.tasks.filter((task) => task.id !== found.id);
+  async deleteTaskById(id: string): Promise<void> {
+    // NOTE remove와 delete가 있는데 remove는 entity 객체를 요구하므로 DB에 접근해야 해서 비권장
+    const result = await this.tasksRepository.delete(id);
+    if (result.affected === 0) {
+      throw new NotFoundException([`Task with id "${id}" not found`]);
+    }
   }
 }
 
