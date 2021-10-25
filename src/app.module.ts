@@ -31,3 +31,12 @@ import { configValidationSchema } from './config.schema';
 })
 export class AppModule {}
 // NOTE root module
+
+/** NOTE logs
+ * https://docs.nestjs.com/techniques/logger
+ * warning VS error: whether fatal/destructive or not
+ *              Log   Warning   Error   Debug   Verbose
+ * development  O       O         O       O       O
+ * staging      O       O         O       X       X
+ * production   O       O         X       X       X
+ */
